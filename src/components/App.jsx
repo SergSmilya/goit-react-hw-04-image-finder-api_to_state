@@ -2,13 +2,11 @@ import { useState, useEffect } from 'react';
 import css from './App.module.css';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import GalleryApi from '../Utils/Api';
+import galleryApi from '../Utils/Api';
 import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
 import Button from './Button/Button';
 import Loader from './Loader/Loader';
-
-const requestApi = new GalleryApi();
 
 const notify = () => {
   toast('Not found', {
@@ -28,25 +26,24 @@ export default function App() {
   const [visibleSpinerBool, setVisibleSpinerBool] = useState(false);
   const [gallerys, setGallerys] = useState([]);
   const [totalHits, setTotalHits] = useState(0);
+  const [page, setPage] = useState(1);
 
   const handleWriteValueInStateOfSubmit = valueString => {
     setValue(valueString);
-    requestApi.resetPage();
+    setPage(1);
+    setGallerys([]);
   };
 
   useEffect(() => {
     if (value === '') return;
 
     setVisibleSpinerBool(true);
-    requestApi.writeValue = value;
 
-    requestApi
-      .search()
+    galleryApi(value, page)
       .then(({ data: { totalHits, hits } }) => {
         if (totalHits > 0) {
           // hits це масив
-          // console.log(totalHits, total);
-          setGallerys(hits);
+          setGallerys(s => [...s, ...hits]);
           setTotalHits(totalHits);
         } else {
           notify();
@@ -54,29 +51,18 @@ export default function App() {
       })
       .catch(console.log)
       .finally(setVisibleSpinerBool(false));
-  }, [value]);
+  }, [page, value]);
 
   const handleLoadMore = () => {
     setVisibleSpinerBool(true);
-
-    requestApi
-      .search()
-      .then(({ data: { hits } }) => {
-        setGallerys(prevGal => [...prevGal, ...hits]);
-      })
-      .catch(console.log)
-      .finally(setVisibleSpinerBool(false));
+    setPage(s => s + 1);
   };
 
   return (
     <div className={css.App}>
       <Searchbar onSubmited={handleWriteValueInStateOfSubmit} />
 
-      {visibleSpinerBool ? (
-        <Loader visibleSpinerBool={visibleSpinerBool} />
-      ) : (
-        <ImageGallery gallerys={gallerys} />
-      )}
+      {visibleSpinerBool ? <Loader /> : <ImageGallery gallerys={gallerys} />}
 
       {gallerys.length !== totalHits && (
         <Button
